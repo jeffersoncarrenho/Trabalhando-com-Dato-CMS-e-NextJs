@@ -3,6 +3,10 @@ import { Footer } from "../../components/commons/Footer";
 import { Menu } from "../../components/commons/Menu";
 import { Box, Text, theme } from "../../theme/components";
 import { cmsService } from "../../infra/cms/cmsService";
+import { renderNodeRule, StructuredText } from "react-datocms";
+import { isHeading } from "datocms-structured-text-utils";
+import CMSProvider, { getCMSContent } from "../../infra/cms/CMSProvider";
+import { pageHOC } from "../../components/wrappers/pageHOC";
 
 export async function getStaticPaths() {
   return {
@@ -11,7 +15,7 @@ export async function getStaticPaths() {
   };
 }
 
-export async function getStaticProps({ params }) {
+export async function getStaticProps({ params, preview }) {
   const { id } = params;
 
   const Contentquery = `
@@ -26,20 +30,19 @@ export async function getStaticProps({ params }) {
 
   const { data } = await cmsService({
     query: Contentquery,
+    preview,
   });
 
   // console.log("dados do cms", data);
 
   return {
     props: {
-      id,
-      title: data.contentFaqQuestion.title,
-      content: data.contentFaqQuestion.content,
+      cmsContent: data,
     },
   };
 }
 
-export default function FAQQuestionScreen({ title, content }) {
+function FAQQuestionScreen({ cmsContent }) {
   return (
     <>
       <Head>
@@ -68,15 +71,36 @@ export default function FAQQuestionScreen({ title, content }) {
           }}
         >
           <Text tag="h1" variant="heading1">
-            {title}
+            {cmsContent.contentFaqQuestion.title}
           </Text>
 
           {/* <Box dangerouslySetInnerHTML={{ __html: content }} /> */}
-          <pre>{JSON.stringify(content, null, 4)}</pre>
+
+          <div>
+            <StructuredText
+              data={cmsContent.contentFaqQuestion.content}
+              customNodeRules={[
+                renderNodeRule(isHeading, ({ node, children, key }) => {
+                  const tag = `h${node.level}`;
+                  const variant = `h${node.level}`;
+                  return (
+                    <Text tag={tag} variant={variant} key={key}>
+                      {children}
+                    </Text>
+                  );
+                }),
+              ]}
+            />
+          </div>
+
+          <pre>
+            {/* {JSON.stringify(cmsContent.contentFaqQuestion.content, null, 4)} */}
+          </pre>
         </Box>
       </Box>
-
       <Footer />
     </>
   );
 }
+
+export default pageHOC(FAQQuestionScreen);
