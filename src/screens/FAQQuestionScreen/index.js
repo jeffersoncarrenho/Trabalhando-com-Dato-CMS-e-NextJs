@@ -9,8 +9,33 @@ import CMSProvider, { getCMSContent } from "../../infra/cms/CMSProvider";
 import { pageHOC } from "../../components/wrappers/pageHOC";
 
 export async function getStaticPaths() {
+  const pathsQuery = `
+    query($first:IntType, $skip:IntType){
+      allContentFaqQuestions(first: $first, skip: $skip){
+        id
+        title
+      }
+    }
+  `;
+
+  const { data } = await cmsService({
+    query: pathsQuery,
+    variables: {
+      first: 100,
+      skip: 0,
+    },
+  });
+
+  console.log(data.allContentFaqQuestions);
+
+  const paths = data.allContentFaqQuestions.map(({ id }) => {
+    return {
+      params: { id: id },
+    };
+  });
+
   return {
-    paths: [{ params: { id: "f138c88d" } }, { params: { id: "h138c88d" } }],
+    paths,
     fallback: false,
   };
 }
@@ -19,17 +44,24 @@ export async function getStaticProps({ params, preview }) {
   const { id } = params;
 
   const Contentquery = `
-    query{
-      contentFaqQuestion{
+    query($id: ItemId){
+      contentFaqQuestion(filter: {
+        id: {
+          eq: $id
+        }
+      }){
         title
         content{
           value
         }
-      }
+      } 
     }`;
 
   const { data } = await cmsService({
     query: Contentquery,
+    variables: {
+      id: id,
+    },
     preview,
   });
 
